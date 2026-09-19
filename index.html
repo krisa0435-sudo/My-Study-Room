@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Room</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#161f1a">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Study Room">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  :root {
+    --bg: #efe6d3;
+    --surface: #fbf6ec;
+    --surface-2: #e8dcc0;
+    --text: #2a2318;
+    --text-dim: #746b56;
+    --accent: #a8691a;
+    --accent-ink: #ffffff;
+    --accent-2: #45624a;
+    --border: #d6c6a0;
+    --danger: #a13f2b;
+    --focus-ring: #a8691a;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161f1a;
+      --surface: #1e2922;
+      --surface-2: #26332b;
+      --text: #ece3ce;
+      --text-dim: #9aa598;
+      --accent: #dba249;
+      --accent-ink: #1c1406;
+      --accent-2: #86ab8b;
+      --border: #33453a;
+      --danger: #e08669;
+      --focus-ring: #dba249;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161f1a;
+    --surface: #1e2922;
+    --surface-2: #26332b;
+    --text: #ece3ce;
+    --text-dim: #9aa598;
+    --accent: #dba249;
+    --accent-ink: #1c1406;
+    --accent-2: #86ab8b;
+    --border: #33453a;
+    --danger: #e08669;
+    --focus-ring: #dba249;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: "Source Serif 4", Georgia, serif; margin: 0; }
+  button { font-family: inherit; }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  header.top h1 {
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  header.top p {
+    margin: 4px 0 0;
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    max-width: 46ch;
+  }
+  .theme-toggle {
+    display: flex;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+    height: fit-content;
+  }
+  .theme-toggle button {
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .theme-toggle button.active {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  @media (min-width: 900px) {
+    .layout { grid-template-columns: 340px 1fr; align-items: start; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .card + .card { margin-top: 20px; }
+
+  .card h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Timer */
+  .timer-card { text-align: center; }
+  .mode-label {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .ring-wrap { position: relative; width: 220px; height: 220px; margin: 0 auto; }
+  .ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: var(--surface-2); stroke-width: 8; }
+  .ring-progress { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.4s linear; }
+  .ring-time {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 2.4rem;
+    font-weight: 500;
+  }
+  .timer-controls { display: flex; gap: 8px; justify-content: center; margin-top: 18px; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+    padding: 9px 16px;
+    border-radius: 5px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .btn.ghost { background: transparent; }
+  .btn.small { padding: 5px 10px; font-size: 0.78rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .duration-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .duration-field {
+    flex: 1;
+    text-align: left;
+  }
+  .duration-field label {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .duration-field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 8px;
+    border-radius: 4px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.92rem;
+  }
+  .auto-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    text-align: left;
+  }
+
+  .stat-line {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    text-align: left;
+  }
+  .stat-line strong { color: var(--text); font-weight: 600; }
+
+  /* Materials */
+  .upload-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 6px;
+    padding: 22px 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.86rem;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .upload-zone strong { color: var(--text); display: block; margin-bottom: 4px; font-size: 0.92rem; }
+  #file-input { display: none; }
+
+  .material-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .material-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .material-item:hover { background: var(--surface-2); }
+  .material-item.active { border-color: var(--accent); background: var(--surface-2); }
+  .material-item .kind {
+    width: 30px; height: 30px; flex-shrink: 0;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; font-weight: 600;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .material-item.active .kind { color: var(--accent); border-color: var(--accent); }
+  .material-item .info { flex: 1; min-width: 0; }
+  .material-item .name {
+    font-size: 0.88rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .material-item .meta { font-size: 0.72rem; color: var(--text-dim); }
+  .material-item .remove {
+    border: none; background: none; color: var(--text-dim);
+    cursor: pointer; font-size: 0.95rem; padding: 4px;
+    line-height: 1;
+  }
+  .material-item .remove:hover { color: var(--danger); }
+
+  .empty-note {
+    color: var(--text-dim);
+    font-size: 0.86rem;
+    padding: 6px 2px;
+  }
+
+  /* Reading pane */
+  .reading-card h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .reading-card h2 span.sub { font-size: 0.76rem; color: var(--text-dim); font-weight: 400; }
+  .reading-body {
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .slide-block, .para-block {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .slide-block:last-child, .para-block:last-child { border-bottom: none; }
+  .slide-block .slide-index {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .notes-area {
+    margin-top: 16px;
+  }
+  .notes-area label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .notes-area textarea {
+    width: 100%;
+    min-height: 110px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    line-height: 1.5;
+  }
+
+  /* Session log */
+  table.log { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table.log th, table.log td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--border); }
+  table.log th { color: var(--text-dim); font-weight: 500; font-size: 0.76rem; }
+  table.log td.material-col { color: var(--text-dim); }
+  .log-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .log-header h2 { border: none; padding: 0; margin: 0; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 0.86rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 20;
+  }
+  .toast.show { opacity: 1; }
+
+  @media (max-width: 480px) {
+    .ring-wrap { width: 180px; height: 180px; }
+    .ring-time { font-size: 1.9rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Study Room</h1>
+      <p>Upload your lesson slides or notes, then work through them in timed focus sessions.</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="btn primary small" id="install-btn" style="display:none;">Install app</button>
+      <div class="theme-toggle" id="theme-toggle">
+        <button data-theme="light">Light</button>
+        <button data-theme="dark">Dark</button>
+        <button data-theme="auto" class="active">Auto</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: TIMER -->
+    <div>
+      <div class="card timer-card">
+        <h2 style="border:none; padding-bottom:0; margin-bottom:14px;">Session timer</h2>
+        <div class="mode-label" id="mode-label">Focus</div>
+        <div class="ring-wrap">
+          <svg viewBox="0 0 220 220">
+            <circle class="ring-track" cx="110" cy="110" r="100"></circle>
+            <circle class="ring-progress" id="ring-progress" cx="110" cy="110" r="100"
+                    stroke-dasharray="628" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="ring-time" id="ring-time">25:00</div>
+        </div>
+        <div class="timer-controls">
+          <button class="btn primary" id="start-btn">Start</button>
+          <button class="btn ghost" id="reset-btn">Reset</button>
+          <button class="btn ghost" id="skip-btn">Skip</button>
+        </div>
+        <div class="duration-row">
+          <div class="duration-field">
+            <label for="focus-min">Focus (min)</label>
+            <input type="number" id="focus-min" min="1" max="180" value="25">
+          </div>
+          <div class="duration-field">
+            <label for="break-min">Break (min)</label>
+            <input type="number" id="break-min" min="1" max="60" value="5">
+          </div>
+        </div>
+        <label class="auto-row">
+          <input type="checkbox" id="auto-continue">
+          Start the next session automatically
+        </label>
+        <div class="stat-line" id="stat-line">No focus sessions logged yet today.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: MATERIALS + READING -->
+    <div>
+      <div class="card">
+        <h2>Lesson materials</h2>
+        <div class="upload-zone" id="upload-zone">
+          <strong>Add a lesson file</strong>
+          Drop a PowerPoint (.pptx) or Word (.docx) file here, or click to choose one
+        </div>
+        <input type="file" id="file-input" accept=".pptx,.docx" multiple>
+        <ul class="material-list" id="material-list"></ul>
+        <p class="empty-note" id="empty-note">Nothing uploaded yet — add a file to pull its text in as study notes.</p>
+      </div>
+
+      <div class="card reading-card" id="reading-card" style="display:none;">
+        <h2><span id="reading-title">Notes</span><span class="sub" id="reading-sub"></span></h2>
+        <div class="reading-body" id="reading-body"></div>
+        <div class="notes-area">
+          <label for="personal-notes">Your notes on this material</label>
+          <textarea id="personal-notes" placeholder="Jot down anything you want to remember while you study this..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="log-header">
+          <h2>Session log</h2>
+          <button class="btn ghost small" id="clear-log-btn">Clear log</button>
+        </div>
+        <div id="log-wrap">
+          <p class="empty-note" id="log-empty">Completed sessions will show up here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- storage helpers ----------
+  function loadJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) { return fallback; }
+  }
+  function saveJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  }
+
+  const STORAGE = {
+    materials: "studyroom_materials_v1",
+    sessions: "studyroom_sessions_v1",
+    settings: "studyroom_settings_v1",
+    theme: "studyroom_theme_v1"
+  };
+
+  // ---------- theme ----------
+  const themeButtons = document.querySelectorAll("#theme-toggle button");
+  function applyTheme(mode) {
+    if (mode === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", mode);
+    themeButtons.forEach(b => b.classList.toggle("active", b.dataset.theme === mode));
+    saveJSON(STORAGE.theme, mode);
+  }
+  themeButtons.forEach(b => b.addEventListener("click", () => applyTheme(b.dataset.theme)));
+  applyTheme(loadJSON(STORAGE.theme, "auto"));
+
+  // ---------- toast ----------
+  const toastEl = document.getElementById("toast");
+  let toastTimer = null;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
+  }
+
+  // ---------- state ----------
+  let materials = loadJSON(STORAGE.materials, []); // {id,name,kind,units:[{label,text}],notes}
+  let sessions = loadJSON(STORAGE.sessions, []);   // {ts,mode,minutes,material}
+  let activeMaterialId = materials.length ? materials[0].id : null;
+
+  const settings = loadJSON(STORAGE.settings, { focusMin: 25, breakMin: 5, autoContinue: false });
+  document.getElementById("focus-min").value = settings.focusMin;
+  document.getElementById("break-min").value = settings.breakMin;
+  document.getElementById("auto-continue").checked = !!settings.autoContinue;
+
+  function persistMaterials() {
+    if (!saveJSON(STORAGE.materials, materials)) {
+      toast("Your browser storage is full — new notes won't be saved after reload.");
+    }
+  }
+  function persistSessions() { saveJSON(STORAGE.sessions, sessions); }
+  function persistSettings() {
+    saveJSON(STORAGE.settings, {
+      focusMin: Number(document.getElementById("focus-min").value) || 25,
+      breakMin: Number(document.getElementById("break-min").value) || 5,
+      autoContinue: document.getElementById("auto-continue").checked
+    });
+  }
+
+  // ---------- XML / file parsing ----------
+  function decodeEntities(str) {
+    return str
+      .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(n))
+      .replace(/&amp;/g, "&");
+  }
+
+  async function parseDocx(buffer) {
+    const zip = await JSZip.loadAsync(buffer);
+    const file = zip.file("word/document.xml");
+    if (!file) throw new Error("No document.xml found");
+    const xml = await file.async("string");
+    const paraMatches = xml.match(/<w:p[ >][\s\S]*?<\/w:p>/g) || [];
+    const units = [];
+    paraMatches.forEach((p, i) => {
+      const runs = p.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) || [];
+      const text = runs.map(r => decodeEntities(r.replace(/<[^>]+>/g, ""))).join("");
+      if (text.trim()) units.push({ label: "Paragraph " + (i + 1), text: text.trim() });
+    });
+    return units;
+  }
+
+  async function parsePptx(buffer) {
+    const zip = await JSZip.loadAsync(buffer);
+    const slideNames = Object.keys(zip.files)
+      .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+      .sort((a, b) => {
+        const na = parseInt(a.match(/(\d+)/)[1], 10);
+        const nb = parseInt(b.match(/(\d+)/)[1], 10);
+        return na - nb;
+      });
+    const units = [];
+    for (let i = 0; i < slideNames.length; i++) {
+      const xml = await zip.file(slideNames[i]).async("string");
+      const runs = xml.match(/<a:t>([\s\S]*?)<\/a:t>/g) || [];
+      const text = runs.map(r => decodeEntities(r.replace(/<[^>]+>/g, ""))).join(" ").replace(/\s+/g, " ").trim();
+      units.push({ label: "Slide " + (i + 1), text: text || "(no text on this slide)" });
+    }
+    return units;
+  }
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  async function handleFiles(fileList) {
+    for (const file of Array.from(fileList)) {
+      const lower = file.name.toLowerCase();
+      const isDocx = lower.endsWith(".docx");
+      const isPptx = lower.endsWith(".pptx");
+      if (!isDocx && !isPptx) {
+        toast(file.name + " isn't a .docx or .pptx file — skipped.");
+        continue;
+      }
+      try {
+        const buffer = await file.arrayBuffer();
+        const units = isDocx ? await parseDocx(buffer) : await parsePptx(buffer);
+        const material = {
+          id: uid(),
+          name: file.name,
+          kind: isDocx ? "docx" : "pptx",
+          units: units,
+          notes: ""
+        };
+        materials.push(material);
+        activeMaterialId = material.id;
+        persistMaterials();
+        renderMaterials();
+        renderReading();
+        toast("Added " + file.name);
+      } catch (err) {
+        toast("Couldn't read " + file.name + " — the file may be corrupted or password-protected.");
+      }
+    }
+  }
+
+  // ---------- materials UI ----------
+  const listEl = document.getElementById("material-list");
+  const emptyNote = document.getElementById("empty-note");
+  const readingCard = document.getElementById("reading-card");
+  const readingBody = document.getElementById("reading-body");
+  const readingTitle = document.getElementById("reading-title");
+  const readingSub = document.getElementById("reading-sub");
+  const personalNotes = document.getElementById("personal-notes");
+
+  function renderMaterials() {
+    listEl.innerHTML = "";
+    emptyNote.style.display = materials.length ? "none" : "block";
+    materials.forEach(m => {
+      const li = document.createElement("li");
+      li.className = "material-item" + (m.id === activeMaterialId ? " active" : "");
+      li.innerHTML =
+        '<div class="kind">' + m.kind.toUpperCase() + '</div>' +
+        '<div class="info"><div class="name">' + escapeHtml(m.name) + '</div>' +
+        '<div class="meta">' + m.units.length + (m.kind === "pptx" ? " slides" : " paragraphs") + '</div></div>' +
+        '<button class="remove" title="Remove" aria-label="Remove ' + escapeHtml(m.name) + '">\u00d7</button>';
+      li.addEventListener("click", (e) => {
+        if (e.target.classList.contains("remove")) return;
+        activeMaterialId = m.id;
+        renderMaterials();
+        renderReading();
+      });
+      li.querySelector(".remove").addEventListener("click", () => {
+        materials = materials.filter(x => x.id !== m.id);
+        if (activeMaterialId === m.id) activeMaterialId = materials.length ? materials[0].id : null;
+        persistMaterials();
+        renderMaterials();
+        renderReading();
+      });
+      listEl.appendChild(li);
+    });
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderReading() {
+    const material = materials.find(m => m.id === activeMaterialId);
+    if (!material) { readingCard.style.display = "none"; return; }
+    readingCard.style.display = "block";
+    readingTitle.textContent = material.name;
+    readingSub.textContent = material.units.length + (material.kind === "pptx" ? " slides" : " paragraphs");
+    readingBody.innerHTML = material.units.map(u =>
+      material.kind === "pptx"
+        ? '<div class="slide-block"><div class="slide-index">' + escapeHtml(u.label) + '</div>' + escapeHtml(u.text) + '</div>'
+        : '<div class="para-block">' + escapeHtml(u.text) + '</div>'
+    ).join("") || '<p class="empty-note">No readable text was found in this file.</p>';
+    personalNotes.value = material.notes || "";
+  }
+
+  personalNotes.addEventListener("input", () => {
+    const material = materials.find(m => m.id === activeMaterialId);
+    if (!material) return;
+    material.notes = personalNotes.value;
+    persistMaterials();
+  });
+
+  const uploadZone = document.getElementById("upload-zone");
+  const fileInput = document.getElementById("file-input");
+  uploadZone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", (e) => { handleFiles(e.target.files); fileInput.value = ""; });
+  ["dragenter", "dragover"].forEach(evt =>
+    uploadZone.addEventListener(evt, (e) => { e.preventDefault(); uploadZone.classList.add("dragover"); })
+  );
+  ["dragleave", "drop"].forEach(evt =>
+    uploadZone.addEventListener(evt, (e) => { e.preventDefault(); uploadZone.classList.remove("dragover"); })
+  );
+  uploadZone.addEventListener("drop", (e) => { handleFiles(e.dataTransfer.files); });
+
+  renderMaterials();
+  renderReading();
+
+  // ---------- timer ----------
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 100;
+  const ringProgress = document.getElementById("ring-progress");
+  ringProgress.setAttribute("stroke-dasharray", RING_CIRCUMFERENCE.toFixed(1));
+  const ringTime = document.getElementById("ring-time");
+  const modeLabel = document.getElementById("mode-label");
+  const startBtn = document.getElementById("start-btn");
+  const resetBtn = document.getElementById("reset-btn");
+  const skipBtn = document.getElementById("skip-btn");
+  const focusMinInput = document.getElementById("focus-min");
+  const breakMinInput = document.getElementById("break-min");
+  const autoContinueInput = document.getElementById("auto-continue");
+
+  let mode = "focus"; // or "break"
+  let totalSeconds = Number(focusMinInput.value) * 60;
+  let remaining = totalSeconds;
+  let running = false;
+  let intervalId = null;
+
+  function fmt(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = Math.floor(sec % 60).toString().padStart(2, "0");
+    return m + ":" + s;
+  }
+
+  function updateRing() {
+    const frac = totalSeconds > 0 ? remaining / totalSeconds : 0;
+    ringProgress.setAttribute("stroke-dashoffset", (RING_CIRCUMFERENCE * (1 - frac)).toFixed(1));
+    ringTime.textContent = fmt(remaining);
+  }
+
+  function setMode(newMode, resetTime) {
+    mode = newMode;
+    modeLabel.textContent = mode === "focus" ? "Focus" : "Break";
+    if (resetTime) {
+      totalSeconds = (mode === "focus" ? Number(focusMinInput.value) : Number(breakMinInput.value)) * 60;
+      remaining = totalSeconds;
+    }
+    updateRing();
+  }
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = mode === "focus" ? 660 : 520;
+      g.gain.value = 0.001;
+      o.connect(g); g.connect(ctx.destination);
+      const now = ctx.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      o.start(now);
+      o.stop(now + 0.55);
+      o.onended = () => ctx.close();
+    } catch (e) { /* audio not available, ignore */ }
+  }
+
+  function todayStats() {
+    const today = new Date().toDateString();
+    const todays = sessions.filter(s => s.mode === "focus" && new Date(s.ts).toDateString() === today);
+    const minutes = todays.reduce((a, s) => a + s.minutes, 0);
+    return { count: todays.length, minutes };
+  }
+
+  function renderStatLine() {
+    const { count, minutes } = todayStats();
+    const statLine = document.getElementById("stat-line");
+    statLine.innerHTML = count
+      ? "Today: <strong>" + count + "</strong> focus session" + (count === 1 ? "" : "s") + ", <strong>" + minutes + "</strong> min"
+      : "No focus sessions logged yet today.";
+  }
+  renderStatLine();
+
+  function renderLog() {
+    const wrap = document.getElementById("log-wrap");
+    if (!sessions.length) {
+      wrap.innerHTML = '<p class="empty-note" id="log-empty">Completed sessions will show up here.</p>';
+      return;
+    }
+    const rows = sessions.slice().reverse().slice(0, 40).map(s => {
+      const d = new Date(s.ts);
+      const time = d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      return "<tr><td>" + time + "</td><td>" + (s.mode === "focus" ? "Focus" : "Break") + "</td><td>" + s.minutes + " min</td><td class=\"material-col\">" + escapeHtml(s.material || "\u2014") + "</td></tr>";
+    }).join("");
+    wrap.innerHTML =
+      '<table class="log"><thead><tr><th>When</th><th>Type</th><th>Length</th><th>Material</th></tr></thead><tbody>' +
+      rows + "</tbody></table>";
+  }
+  renderLog();
+
+  document.getElementById("clear-log-btn").addEventListener("click", () => {
+    sessions = [];
+    persistSessions();
+    renderLog();
+    renderStatLine();
+  });
+
+  function tick() {
+    remaining -= 1;
+    if (remaining <= 0) {
+      const finishedMode = mode;
+      const finishedMinutes = Math.round(totalSeconds / 60);
+      const activeMaterial = materials.find(m => m.id === activeMaterialId);
+      sessions.push({ ts: Date.now(), mode: finishedMode, minutes: finishedMinutes, material: activeMaterial ? activeMaterial.name : "" });
+      persistSessions();
+      renderLog();
+      renderStatLine();
+      beep();
+      stopInterval();
+      const nextMode = finishedMode === "focus" ? "break" : "focus";
+      setMode(nextMode, true);
+      if (autoContinueInput.checked) {
+        startTimer();
+      } else {
+        running = false;
+        startBtn.textContent = "Start";
+      }
+      return;
+    }
+    updateRing();
+  }
+
+  function startInterval() { intervalId = setInterval(tick, 1000); }
+  function stopInterval() { clearInterval(intervalId); intervalId = null; }
+
+  function startTimer() {
+    running = true;
+    startBtn.textContent = "Pause";
+    startInterval();
+  }
+  function pauseTimer() {
+    running = false;
+    startBtn.textContent = "Start";
+    stopInterval();
+  }
+
+  startBtn.addEventListener("click", () => {
+    if (running) pauseTimer(); else startTimer();
+  });
+
+  resetBtn.addEventListener("click", () => {
+    pauseTimer();
+    setMode(mode, true);
+  });
+
+  skipBtn.addEventListener("click", () => {
+    pauseTimer();
+    const nextMode = mode === "focus" ? "break" : "focus";
+    setMode(nextMode, true);
+  });
+
+  [focusMinInput, breakMinInput].forEach(input => {
+    input.addEventListener("change", () => {
+      let v = Math.max(1, Math.min(input === focusMinInput ? 180 : 60, Number(input.value) || 1));
+      input.value = v;
+      persistSettings();
+      if (!running) setMode(mode, true);
+    });
+  });
+  autoContinueInput.addEventListener("change", persistSettings);
+
+  setMode("focus", true);
+
+  // ---------- PWA install + offline ----------
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
+
+  let deferredInstallPrompt = null;
+  const installBtn = document.getElementById("install-btn");
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.style.display = "inline-block";
+  });
+
+  installBtn.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.style.display = "none";
+    if (choice.outcome === "accepted") toast("Study Room installed.");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    installBtn.style.display = "none";
+    toast("Study Room installed.");
+  });
+
+  // iOS Safari has no install prompt event — nudge with instructions instead.
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  if (isIos && !isStandalone) {
+    setTimeout(() => toast("To install: tap Share, then \u201cAdd to Home Screen.\u201d"), 1200);
+  }
+})();
+</script>
+</body>
+</html>
